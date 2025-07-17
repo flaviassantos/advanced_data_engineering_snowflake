@@ -7,23 +7,23 @@ database, schema and warehouse creation
 
 
 -- create tasty_bytes database
-CREATE OR ALTER DATABASE {{env}}_tasty_bytes;
+CREATE OR REPLACE DATABASE tasty_bytes;
 
 
 -- create raw_pos schema
-CREATE OR ALTER SCHEMA {{env}}_tasty_bytes.raw_pos;
+CREATE OR REPLACE SCHEMA tasty_bytes.raw_pos;
 
 
 -- create raw_customer schema
-CREATE OR ALTER SCHEMA {{env}}_tasty_bytes.raw_customer;
+CREATE OR REPLACE SCHEMA tasty_bytes.raw_customer;
 
 
 -- create harmonized schema
-CREATE OR ALTER SCHEMA {{env}}_tasty_bytes.harmonized;
+CREATE OR REPLACE SCHEMA tasty_bytes.harmonized;
 
 
 -- create analytics schema
-CREATE OR ALTER SCHEMA {{env}}_tasty_bytes.analytics;
+CREATE OR REPLACE SCHEMA tasty_bytes.analytics;
 
 
 -- create warehouse for ingestion
@@ -40,13 +40,13 @@ file format and stage creation
 --*/
 
 
-CREATE OR ALTER FILE FORMAT {{env}}_tasty_bytes.public.csv_ff
+CREATE OR REPLACE FILE FORMAT tasty_bytes.public.csv_ff
 type = 'csv';
 
 
-CREATE OR REPLACE STAGE {{env}}_tasty_bytes.public.s3load
+CREATE OR REPLACE STAGE tasty_bytes.public.s3load
 url = 's3://sfquickstarts/tasty-bytes-builder-education/'
-file_format = {{env}}_tasty_bytes.public.csv_ff;
+file_format = tasty_bytes.public.csv_ff;
 
 
 /*--
@@ -55,22 +55,20 @@ raw zone table build
 
 
 -- country table build
-
--- todo: complete table build
-CREATE TABLE {{env}}_tasty_bytes.raw_pos.country
+CREATE OR REPLACE TABLE tasty_bytes.raw_pos.country
 (
    country_id NUMBER(18,0),
    country VARCHAR(16777216),
    iso_currency VARCHAR(3),
    iso_country VARCHAR(2),
+   city_id NUMBER(19,0),
    city VARCHAR(16777216),
-   city_population VARCHAR(16777216),
-   city_id NUMBER(19,0)
+   city_population VARCHAR(16777216)
 );
 
 
 -- franchise table build
-CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.franchise
+CREATE OR REPLACE TABLE tasty_bytes.raw_pos.franchise
 (
    franchise_id NUMBER(38,0),
    first_name VARCHAR(16777216),
@@ -83,7 +81,7 @@ CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.franchise
 
 
 -- location table build
-CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.location
+CREATE OR REPLACE TABLE tasty_bytes.raw_pos.location
 (
    location_id NUMBER(19,0),
    placekey VARCHAR(16777216),
@@ -96,7 +94,7 @@ CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.location
 
 
 -- menu table build
-CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.menu
+CREATE OR REPLACE TABLE tasty_bytes.raw_pos.menu
 (
    menu_id NUMBER(19,0),
    menu_type_id NUMBER(38,0),
@@ -113,7 +111,7 @@ CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.menu
 
 
 -- truck table build
-CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.truck
+CREATE OR REPLACE TABLE tasty_bytes.raw_pos.truck
 (
    truck_id NUMBER(38,0),
    menu_type_id NUMBER(38,0),
@@ -133,7 +131,7 @@ CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.truck
 
 
 -- order_header table build
-CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.order_header
+CREATE OR REPLACE TABLE tasty_bytes.raw_pos.order_header
 (
    order_id NUMBER(38,0),
    truck_id NUMBER(38,0),
@@ -155,7 +153,7 @@ CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.order_header
 
 
 -- order_detail table build
-CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.order_detail
+CREATE OR REPLACE TABLE tasty_bytes.raw_pos.order_detail
 (
    order_detail_id NUMBER(38,0),
    order_id NUMBER(38,0),
@@ -170,7 +168,7 @@ CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_pos.order_detail
 
 
 -- customer loyalty table build
-CREATE OR ALTER TABLE {{env}}_tasty_bytes.raw_customer.customer_loyalty
+CREATE OR REPLACE TABLE tasty_bytes.raw_customer.customer_loyalty
 (
    customer_id NUMBER(38,0),
    first_name VARCHAR(16777216),
@@ -196,7 +194,7 @@ harmonized view creation
 
 
 -- orders_v view
-CREATE OR REPLACE VIEW {{env}}_tasty_bytes.harmonized.orders_v
+CREATE OR REPLACE VIEW tasty_bytes.harmonized.orders_v
    AS
 SELECT
    oh.order_id,
@@ -231,23 +229,23 @@ SELECT
    oh.order_tax_amount,
    oh.order_discount_amount,
    oh.order_total
-FROM {{env}}_tasty_bytes.raw_pos.order_detail od
-JOIN {{env}}_tasty_bytes.raw_pos.order_header oh
+FROM tasty_bytes.raw_pos.order_detail od
+JOIN tasty_bytes.raw_pos.order_header oh
    ON od.order_id = oh.order_id
-JOIN {{env}}_tasty_bytes.raw_pos.truck t
+JOIN tasty_bytes.raw_pos.truck t
    ON oh.truck_id = t.truck_id
-JOIN {{env}}_tasty_bytes.raw_pos.menu m
+JOIN tasty_bytes.raw_pos.menu m
    ON od.menu_item_id = m.menu_item_id
-JOIN {{env}}_tasty_bytes.raw_pos.franchise f
+JOIN tasty_bytes.raw_pos.franchise f
    ON t.franchise_id = f.franchise_id
-JOIN {{env}}_tasty_bytes.raw_pos.location l
+JOIN tasty_bytes.raw_pos.location l
    ON oh.location_id = l.location_id
-LEFT JOIN {{env}}_tasty_bytes.raw_customer.customer_loyalty cl
+LEFT JOIN tasty_bytes.raw_customer.customer_loyalty cl
    ON oh.customer_id = cl.customer_id;
 
 
 -- loyalty_metrics_v view
-CREATE OR REPLACE VIEW {{env}}_tasty_bytes.harmonized.customer_loyalty_metrics_v
+CREATE OR REPLACE VIEW tasty_bytes.harmonized.customer_loyalty_metrics_v
    AS
 SELECT
    cl.customer_id,
@@ -259,8 +257,8 @@ SELECT
    cl.e_mail,
    SUM(oh.order_total) AS total_sales,
    ARRAY_AGG(DISTINCT oh.location_id) AS visited_location_ids_array
-FROM {{env}}_tasty_bytes.raw_customer.customer_loyalty cl
-JOIN {{env}}_tasty_bytes.raw_pos.order_header oh
+FROM tasty_bytes.raw_customer.customer_loyalty cl
+JOIN tasty_bytes.raw_pos.order_header oh
 ON cl.customer_id = oh.customer_id
 GROUP BY cl.customer_id, cl.city, cl.country, cl.first_name,
 cl.last_name, cl.phone_number, cl.e_mail;
@@ -272,17 +270,17 @@ analytics view creation
 
 
 -- orders_v view
-CREATE OR REPLACE VIEW {{env}}_tasty_bytes.analytics.orders_v
+CREATE OR REPLACE VIEW tasty_bytes.analytics.orders_v
 COMMENT = 'Tasty Bytes Order Detail View'
    AS
-SELECT DATE(o.order_ts) AS date, * FROM {{env}}_tasty_bytes.harmonized.orders_v o;
+SELECT DATE(o.order_ts) AS date, * FROM tasty_bytes.harmonized.orders_v o;
 
 
 -- customer_loyalty_metrics_v view
-CREATE OR REPLACE VIEW {{env}}_tasty_bytes.analytics.customer_loyalty_metrics_v
+CREATE OR REPLACE VIEW tasty_bytes.analytics.customer_loyalty_metrics_v
 COMMENT = 'Tasty Bytes Customer Loyalty Member Metrics View'
    AS
-SELECT * FROM {{env}}_tasty_bytes.harmonized.customer_loyalty_metrics_v;
+SELECT * FROM tasty_bytes.harmonized.customer_loyalty_metrics_v;
 
 
 /*--
@@ -294,49 +292,43 @@ USE WAREHOUSE demo_build_wh;
 
 
 -- country table load
-COPY INTO {{env}}_tasty_bytes.raw_pos.country
-(
-   country_id,
-   country,
-   iso_currency,
-   iso_country,
-   city_id,
-   city,
-   city_population
-)
-FROM @{{env}}_tasty_bytes.public.s3load/raw_pos/country/;
+COPY INTO tasty_bytes.raw_pos.country
+FROM @tasty_bytes.public.s3load/raw_pos/country/;
 
 
 -- franchise table load
-COPY INTO {{env}}_tasty_bytes.raw_pos.franchise
-FROM @{{env}}_tasty_bytes.public.s3load/raw_pos/franchise/;
+COPY INTO tasty_bytes.raw_pos.franchise
+FROM @tasty_bytes.public.s3load/raw_pos/franchise/;
 
 
 -- location table load
-COPY INTO {{env}}_tasty_bytes.raw_pos.location
-FROM @{{env}}_tasty_bytes.public.s3load/raw_pos/location/;
+COPY INTO tasty_bytes.raw_pos.location
+FROM @tasty_bytes.public.s3load/raw_pos/location/;
 
 
 -- menu table load
-COPY INTO {{env}}_tasty_bytes.raw_pos.menu
-FROM @{{env}}_tasty_bytes.public.s3load/raw_pos/menu/;
+COPY INTO tasty_bytes.raw_pos.menu
+FROM @tasty_bytes.public.s3load/raw_pos/menu/;
 
 
 -- truck table load
-COPY INTO {{env}}_tasty_bytes.raw_pos.truck
-FROM @{{env}}_tasty_bytes.public.s3load/raw_pos/truck/;
+COPY INTO tasty_bytes.raw_pos.truck
+FROM @tasty_bytes.public.s3load/raw_pos/truck/;
 
 
 -- customer_loyalty table load
-COPY INTO {{env}}_tasty_bytes.raw_customer.customer_loyalty
-FROM @{{env}}_tasty_bytes.public.s3load/raw_customer/customer_loyalty/;
+COPY INTO tasty_bytes.raw_customer.customer_loyalty
+FROM @tasty_bytes.public.s3load/raw_customer/customer_loyalty/;
 
 
 -- order_header table load
-COPY INTO {{env}}_tasty_bytes.raw_pos.order_header
-FROM @{{env}}_tasty_bytes.public.s3load/raw_pos/subset_order_header/;
+COPY INTO tasty_bytes.raw_pos.order_header
+FROM @tasty_bytes.public.s3load/raw_pos/subset_order_header/;
 
 
 -- order_detail table load
-COPY INTO {{env}}_tasty_bytes.raw_pos.order_detail
-FROM @{{env}}_tasty_bytes.public.s3load/raw_pos/subset_order_detail/;
+COPY INTO tasty_bytes.raw_pos.order_detail
+FROM @tasty_bytes.public.s3load/raw_pos/subset_order_detail/;
+
+
+DROP WAREHOUSE demo_build_wh;
