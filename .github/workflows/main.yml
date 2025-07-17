@@ -53,7 +53,7 @@ jobs:
       uses: snowflakedb/snowflake-cli-action@v1.5
       with:
         cli-version: "latest"
-        default-config-file-path: "config.toml"
+        default-config-file-path: "connections.toml"
     # Fetch latest changes from the repository to Snowflake
     - name: Fetch latest changes to Snowflake
       run: snow git fetch course_repo.public.advanced_data_engineering_snowflake --connection advanced_data_engineering_snowflake 
