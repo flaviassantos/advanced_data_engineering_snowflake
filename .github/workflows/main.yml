@@ -34,6 +34,10 @@ jobs:
           # Snowflake CLI requires the connections.toml file to limit its file permissions to read and write for the file owner only
           chown $USER connections.toml
           chmod 0600 connections.toml
+          echo -e "$SNOWCLI_CONNECTION" > config.toml
+          # Snowflake CLI requires the config.toml file to limit its file permissions to read and write for the file owner only
+          chown $USER config.toml
+          chmod 0600 config.toml
           
       # Checkout step is necessary to access repository files
       - name: Checkout repository
